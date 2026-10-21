@@ -1,0 +1,37 @@
+---
+description: Modern UI design rules for job board project
+alwaysApply: true
+---
+
+# UI Design Rules (Light Mode Only)
+
+## Tech Reference
+
+- Framework: Next.js 16 (App Router)
+- UI Library: shadcn/ui
+- Styling: Tailwind CSS
+- Icons: Lucide React
+
+## Design System & Theme
+
+- Mode: Light mode ONLY.
+- Theme System: Use standard shadcn semantic CSS variables (`bg-background`, `text-foreground`, `bg-primary`, `bg-accent`, `bg-muted`, etc.).
+- Style: Clean, modern, minimal visual clutter, soft shadows, rounded corners (`rounded-xl`).
+
+## UI Implementation Guidelines
+
+- Focus strictly on clean UI design and visual layout structure.
+- Always use shadcn/ui components (`Button`, `Card`, `Badge`, `Dialog`, etc.) instead of writing plain HTML.
+- No hardcoded colors or sizes: Use Tailwind theme utilities (`text-sm`, `bg-primary`, `p-4`) instead of arbitrary values like `text-[15px]` or `bg-[#1e293b]`.
+- Keep all layouts fully responsive out of the box using Tailwind flexbox and grid.
+
+```tsx
+// ❌ BAD
+<button className="bg-[#1e293b] text-[15px] px-[18px]">Apply</button>
+
+// ✅ GOOD
+<Button className="rounded-xl">Apply</Button>
+<Card className="rounded-xl bg-card p-4 shadow-sm">
+  <Badge variant="secondary">Full-time</Badge>
+</Card>
+```
