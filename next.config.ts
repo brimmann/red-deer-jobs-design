@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     "127.0.0.1",
     "localhost",
     "192.168.1.2",
+    "192.168.1.3",
     "192.168.137.1",
   ],
   cacheComponents: true,

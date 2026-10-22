@@ -96,9 +96,15 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   )
 }
 
-export function PostJobForm() {
+type PostJobFormProps = {
+  variant?: "public" | "admin"
+}
+
+export function PostJobForm({ variant = "public" }: PostJobFormProps) {
+  const isAdmin = variant === "admin"
   const [title, setTitle] = useState("")
   const [company, setCompany] = useState("")
+  const [addressLine, setAddressLine] = useState("")
   const [employmentSetup, setEmploymentSetup] = useState<string[]>(["Full-Time"])
   const [payAmountMin, setPayAmountMin] = useState("")
   const [payAmountMax, setPayAmountMax] = useState("")
@@ -147,10 +153,12 @@ export function PostJobForm() {
       next.employmentTypes =
         "Select at least one employment type or work setup option."
     }
-    if (!employerEmail.trim()) {
-      next.employerEmail = "Your email is required."
-    } else if (!emailPattern.test(employerEmail.trim())) {
-      next.employerEmail = "Enter a valid email address."
+    if (!isAdmin) {
+      if (!employerEmail.trim()) {
+        next.employerEmail = "Your email is required."
+      } else if (!emailPattern.test(employerEmail.trim())) {
+        next.employerEmail = "Enter a valid email address."
+      }
     }
     if (!applyTo.trim()) {
       next.applyTo = "Enter an application link or email."
@@ -165,6 +173,10 @@ export function PostJobForm() {
     setSubmitted(true)
     const nextErrors = validate()
     setErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) return
+    if (isAdmin) {
+      showToast("Listing published immediately.")
+    }
   }
 
   function clearFieldError(field: keyof FieldErrors) {
@@ -202,22 +214,24 @@ export function PostJobForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col items-center gap-2 text-center">
-        <Badge
-          variant="secondary"
-          className="h-auto gap-1.5 rounded-xl px-3 py-1 text-xs font-medium sm:text-sm"
-        >
-          <CircleDollarSign className="size-3.5 text-primary sm:size-4" />
-          $49 flat rate · 30 days · 100% local reach
-        </Badge>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Post a Local Job
-        </h1>
-        <p className="max-w-xl text-sm text-muted-foreground">
-          No account to create—fill in the form, pay once, and your listing goes
-          live in Red Deer after a quick review.
-        </p>
-      </header>
+      {isAdmin ? null : (
+        <header className="flex flex-col items-center gap-2 text-center">
+          <Badge
+            variant="secondary"
+            className="h-auto gap-1.5 rounded-xl px-3 py-1 text-xs font-medium sm:text-sm"
+          >
+            <CircleDollarSign className="size-3.5 text-primary sm:size-4" />
+            $49 flat rate · 30 days · 100% local reach
+          </Badge>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Post a Local Job
+          </h1>
+          <p className="max-w-xl text-sm text-muted-foreground">
+            No account to create—fill in the form, pay once, and your listing
+            goes live in Red Deer after a quick review.
+          </p>
+        </header>
+      )}
 
       <form
         onSubmit={onSubmit}
@@ -263,6 +277,32 @@ export function PostJobForm() {
                   className="h-10 rounded-xl"
                 />
                 <FieldError id="company-name-error" message={errors.company} />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="workplace-address">
+                  Workplace address{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </Label>
+                <Input
+                  id="workplace-address"
+                  name="addressLine"
+                  autoComplete="street-address"
+                  placeholder="e.g. 4922 50 Ave, Red Deer, AB"
+                  value={addressLine}
+                  onChange={(event) => setAddressLine(event.target.value)}
+                  aria-describedby="workplace-address-hint"
+                  className="h-10 rounded-xl"
+                />
+                <p
+                  id="workplace-address-hint"
+                  className="text-sm text-muted-foreground"
+                >
+                  Exact street address in Red Deer if you want candidates to
+                  find the workplace easily.
+                </p>
               </div>
 
               <div
@@ -438,75 +478,90 @@ export function PostJobForm() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl border bg-card shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle>Your email &amp; access</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 pb-6 sm:pb-8">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="employer-email" className="text-base">
-                Your email
-              </Label>
-              <Input
-                id="employer-email"
-                name="employerEmail"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                value={employerEmail}
-                onChange={(event) => {
-                  setEmployerEmail(event.target.value)
-                  clearFieldError("employerEmail")
-                }}
-                aria-invalid={Boolean(errors.employerEmail)}
-                aria-describedby={
-                  errors.employerEmail ? "employer-email-error" : undefined
-                }
-                className="h-11 rounded-xl border-border bg-background text-base shadow-sm ring-1 ring-foreground/10"
-              />
-              <FieldError
-                id="employer-email-error"
-                message={errors.employerEmail}
-              />
-            </div>
-            <details className="group rounded-xl border border-border bg-muted/40">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
-                How magic links work
-                <ChevronDown
-                  className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
-                  aria-hidden
+        {isAdmin ? null : (
+          <Card className="rounded-xl border bg-card shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle>Your email &amp; access</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 pb-6 sm:pb-8">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="employer-email" className="text-base">
+                  Your email
+                </Label>
+                <Input
+                  id="employer-email"
+                  name="employerEmail"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={employerEmail}
+                  onChange={(event) => {
+                    setEmployerEmail(event.target.value)
+                    clearFieldError("employerEmail")
+                  }}
+                  aria-invalid={Boolean(errors.employerEmail)}
+                  aria-describedby={
+                    errors.employerEmail ? "employer-email-error" : undefined
+                  }
+                  className="h-11 rounded-xl border-border bg-background text-base shadow-sm ring-1 ring-foreground/10"
                 />
-              </summary>
-              <div
-                id="employer-email-help"
-                className="flex flex-col gap-2 border-t border-border px-3 py-2.5 text-sm text-muted-foreground"
-              >
-                <p>
-                  We send a magic link to this address for every job you post.
-                  Open it to edit, renew, or close that listing—no account or
-                  password required.
-                </p>
-                <p>
-                  Each posting gets its own secure link in your inbox so you can
-                  manage jobs separately without signing up.
-                </p>
+                <FieldError
+                  id="employer-email-error"
+                  message={errors.employerEmail}
+                />
               </div>
-            </details>
-          </CardContent>
-        </Card>
+              <details className="group rounded-xl border border-border bg-muted/40">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                  How magic links work
+                  <ChevronDown
+                    className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                    aria-hidden
+                  />
+                </summary>
+                <div
+                  id="employer-email-help"
+                  className="flex flex-col gap-2 border-t border-border px-3 py-2.5 text-sm text-muted-foreground"
+                >
+                  <p>
+                    We send a magic link to this address for every job you post.
+                    Open it to edit, renew, or close that listing—no account or
+                    password required.
+                  </p>
+                  <p>
+                    Each posting gets its own secure link in your inbox so you
+                    can manage jobs separately without signing up.
+                  </p>
+                </div>
+              </details>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="rounded-xl border bg-card shadow-sm">
           <CardHeader>
-            <CardTitle>Checkout — $49</CardTitle>
+            <CardTitle>
+              {isAdmin ? "Publish listing" : "Checkout — $49"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 pb-6 sm:pb-8">
             <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm text-muted-foreground">
-              <li>Your job will be online for 30 days</li>
-              <li>Payment receipt and magic links emailed to you</li>
+              {isAdmin ? (
+                <>
+                  <li>Listing goes live on the board immediately</li>
+                  <li>You can edit or unpublish it from this admin dashboard</li>
+                </>
+              ) : (
+                <>
+                  <li>Your job will be online for 30 days</li>
+                  <li>Payment receipt and magic links emailed to you</li>
+                </>
+              )}
             </ul>
             <Button type="submit" size="lg" className="h-11 w-full rounded-xl">
-              Pay $49 &amp; Publish Job
+              {isAdmin
+                ? "Publish Listing Immediately"
+                : "Pay $49 & Publish Job"}
             </Button>
           </CardContent>
         </Card>
