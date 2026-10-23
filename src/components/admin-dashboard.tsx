@@ -1,8 +1,15 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { Search } from "lucide-react"
 
+import {
+  approveJob,
+  deleteJob,
+  rejectJob,
+  republishJob,
+  unpublishJob,
+} from "@/app/admin/actions"
 import { AdminCreateListingForm } from "@/components/admin-create-listing-form"
 import { AdminListingCard } from "@/components/admin-listing-card"
 import { Badge } from "@/components/ui/badge"
@@ -13,39 +20,24 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import {
-  filterAdminListings,
-  initialAdminListings,
-  type AdminListing,
-} from "@/lib/admin-listings"
+import { filterAdminListings, type AdminListing } from "@/lib/admin-listings"
 
-function formatPostedToday(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date())
-}
-
-export function AdminDashboard() {
+export function AdminDashboard({ listings }: { listings: AdminListing[] }) {
   const [search, setSearch] = useState("")
-  const [listings, setListings] = useState<AdminListing[]>(
-    initialAdminListings
-  )
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   const filteredListings = useMemo(
     () => filterAdminListings(listings, search),
     [listings, search]
   )
 
-  function removeListing(id: string) {
-    setListings((prev) => prev.filter((item) => item.id !== id))
-  }
-
-  function updateStatus(id: string, status: AdminListing["status"]) {
-    setListings((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status } : item))
-    )
+  function runAction(action: () => Promise<{ error?: string }>) {
+    setActionError(null)
+    startTransition(async () => {
+      const result = await action()
+      if (result.error) setActionError(result.error)
+    })
   }
 
   return (
@@ -79,8 +71,14 @@ export function AdminDashboard() {
             placeholder="Filter by job title or employer email…"
             className="h-10 rounded-xl bg-background pl-9"
             aria-label="Filter listings by job title or employer email"
+            disabled={isPending}
           />
         </div>
+        {actionError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {actionError}
+          </p>
+        ) : null}
       </header>
 
       <Tabs defaultValue="pending" className="gap-6">
@@ -110,26 +108,14 @@ export function AdminDashboard() {
                 <AdminListingCard
                   key={listing.id}
                   listing={listing}
-                  onApprove={(id) => updateStatus(id, "Live")}
-                  onReject={removeListing}
-                  onUnpublish={(id) => updateStatus(id, "Expired")}
+                  onApprove={(id) => runAction(() => approveJob(id))}
+                  onReject={(id) => runAction(() => rejectJob(id))}
+                  onUnpublish={(id) => runAction(() => unpublishJob(id))}
                   onEdit={() => {
                     /* demo: no-op */
                   }}
-                  onRepublish={(id) =>
-                    setListings((prev) =>
-                      prev.map((item) =>
-                        item.id === id
-                          ? {
-                              ...item,
-                              status: "Live",
-                              postedDate: formatPostedToday(),
-                            }
-                          : item
-                      )
-                    )
-                  }
-                  onDelete={removeListing}
+                  onRepublish={(id) => runAction(() => republishJob(id))}
+                  onDelete={(id) => runAction(() => deleteJob(id))}
                 />
               ))
             )}

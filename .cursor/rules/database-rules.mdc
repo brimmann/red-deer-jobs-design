@@ -1,0 +1,27 @@
+---
+description: Supabase database schema and table definitions
+alwaysApply: true
+---
+
+# Database Schema & Context (Supabase)
+
+Table Name: `jobs` (Row Level Security is currently DISABLED for testing)
+
+## Table Columns & Data Types
+- `id`: `uuid` (Primary Key, auto-generated)
+- `created_at`: `timestamptz` (auto-generated)
+- `title`: `text` (required)
+- `company_name`: `text` (required)
+- `pay_range`: `text` (optional)
+- `employment_types`: `text[]` (Array of strings for multi-select tags)
+- `description`: `text` (required)
+- `apply_method`: `text` (required — `'url'` or `'email'`)
+- `apply_value`: `text` (required — website link or email address)
+- `employer_email`: `text` (required)
+- `edit_token`: `uuid` (auto-generated)
+- `status`: `text` (default `'pending'` — allowed values: `'pending'`, `'live'`, `'expired'`)
+
+## Rules for AI Agent
+- Use this exact table name (`jobs`) and column names for all Supabase queries.
+- Do not invent extra columns or change column types.
+- Assume public `SELECT`, `INSERT`, `UPDATE`, and `DELETE` access on this table during the initial build phase.

@@ -1,44 +1,31 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { Suspense } from "react"
 
-import { JobDetail } from "@/components/job-detail"
+import { JobDetailSkeleton } from "@/components/job-detail-skeleton"
+import { JobPageLoader } from "@/components/job-page-loader"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
-import { getJob, jobs } from "@/lib/jobs"
 
-export function generateStaticParams() {
-  return jobs.map((job) => ({ id: job.id }))
+export const metadata: Metadata = {
+  title: "Job listing · Red Deer Jobs",
+  description: "Local job details in Red Deer, Alberta.",
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}): Promise<Metadata> {
-  const { id } = await params
-  const job = getJob(id)
-  if (!job) return { title: "Job not found · Red Deer Jobs" }
+/** Dynamic Supabase fetch; opt out of instant-nav prerender validation (Next.js 16). */
+export const instant = false
 
-  return {
-    title: `${job.title} · Red Deer Jobs`,
-    description: job.summary,
-  }
-}
-
-export default async function JobPage({
+export default function JobPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = await params
-  const job = getJob(id)
-  if (!job) notFound()
-
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <SiteHeader />
       <main className="flex-1">
-        <JobDetail job={job} />
+        <Suspense fallback={<JobDetailSkeleton />}>
+          <JobPageLoader params={params} />
+        </Suspense>
       </main>
       <SiteFooter />
     </div>

@@ -11,6 +11,10 @@ import {
 } from "lucide-react"
 
 import { buildJobDescriptionAiPrompt } from "@/lib/job-description-ai"
+import { createAdminListing } from "@/app/admin/actions"
+import {
+  isJobDescriptionEmpty,
+} from "@/lib/jobs/map-admin-job-form"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -118,6 +122,8 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
     message: string
     variant: "success" | "error"
   } | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formVersion, setFormVersion] = useState(0)
 
   useEffect(() => {
     if (!toast) return
@@ -168,14 +174,61 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
     return next
   }
 
-  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function resetFormFields() {
+    setTitle("")
+    setCompany("")
+    setAddressLine("")
+    setEmploymentSetup(["Full-Time"])
+    setPayAmountMin("")
+    setPayAmountMax("")
+    setPayPreset(null)
+    setDescription("")
+    setApplyTo("")
+    setEmployerEmail("")
+    setSubmitted(false)
+    setErrors({})
+  }
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitted(true)
     const nextErrors = validate()
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
-    if (isAdmin) {
-      showToast("Listing published immediately.")
+
+    if (!isAdmin) return
+
+    if (isJobDescriptionEmpty(description)) {
+      showToast("Job description is required.", "error")
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const result = await createAdminListing({
+        title,
+        company,
+        addressLine,
+        employmentSetup,
+        payAmountMin,
+        payAmountMax,
+        payPreset,
+        description,
+        applyTo,
+      })
+
+      if (result.error) {
+        showToast(result.error || "Could not publish listing.", "error")
+        return
+      }
+
+      resetFormFields()
+      setFormVersion((version) => version + 1)
+      showToast("Listing published successfully.")
+    } catch {
+      showToast("Could not publish listing.", "error")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -441,6 +494,7 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
                   </div>
                 </div>
                 <JobDescriptionEditor
+                  key={formVersion}
                   id="job-description"
                   value={description}
                   onChange={setDescription}
@@ -558,9 +612,16 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
                 </>
               )}
             </ul>
-            <Button type="submit" size="lg" className="h-11 w-full rounded-xl">
+            <Button
+              type="submit"
+              size="lg"
+              className="h-11 w-full rounded-xl"
+              disabled={isAdmin && isSubmitting}
+            >
               {isAdmin
-                ? "Publish Listing Immediately"
+                ? isSubmitting
+                  ? "Publishing…"
+                  : "Publish Listing Immediately"
                 : "Pay $49 & Publish Job"}
             </Button>
           </CardContent>

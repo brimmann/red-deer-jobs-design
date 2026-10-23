@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { SearchResults } from "@/components/search-results"
+import { SearchResultsLoader } from "@/components/search-results-loader"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
 
@@ -30,13 +30,31 @@ function SearchResultsFallback() {
   )
 }
 
-export default function SearchPage() {
+type SearchPageProps = {
+  searchParams: Promise<{ q?: string | string[] }>
+}
+
+function parseSearchQuery(rawQuery: string | string[] | undefined) {
+  if (typeof rawQuery === "string") return rawQuery
+  if (Array.isArray(rawQuery)) return rawQuery[0] ?? ""
+  return ""
+}
+
+async function SearchResultsFromParams({
+  searchParams,
+}: SearchPageProps) {
+  const params = await searchParams
+  const query = parseSearchQuery(params.q)
+  return <SearchResultsLoader query={query} />
+}
+
+export default function SearchPage({ searchParams }: SearchPageProps) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <SiteHeader />
       <main className="flex-1 border-t bg-background">
         <Suspense fallback={<SearchResultsFallback />}>
-          <SearchResults />
+          <SearchResultsFromParams searchParams={searchParams} />
         </Suspense>
       </main>
       <SiteFooter />

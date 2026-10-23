@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useState, type ReactNode } from "react"
 import {
   BadgeCheck,
   CircleDollarSign,
@@ -14,7 +14,6 @@ import {
 import { AlertSignup } from "@/components/alert-signup"
 import { HeroDotGrid } from "@/components/hero-dot-grid"
 import { Badge } from "@/components/ui/badge"
-import { JobCard } from "@/components/job-card"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -26,7 +25,6 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { getRecentJobs } from "@/lib/jobs"
 import { cn } from "cn"
 
 const popularSearchTerms = [
@@ -36,15 +34,14 @@ const popularSearchTerms = [
   "Part-Time",
 ] as const
 
-export function HomeBoard() {
+type HomeBoardProps = {
+  jobsFeed: ReactNode
+}
+
+export function HomeBoard({ jobsFeed }: HomeBoardProps) {
   const router = useRouter()
   const [keyword, setKeyword] = useState("")
   const [appliedKeyword, setAppliedKeyword] = useState("")
-
-  const recentJobs = useMemo(
-    () => getRecentJobs(3, appliedKeyword),
-    [appliedKeyword]
-  )
 
   function onSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -131,11 +128,7 @@ export function HomeBoard() {
         <div className="flex flex-col gap-8">
           <section id="jobs" className="flex scroll-mt-24 flex-col gap-4">
             <h2 className="text-lg font-medium">Recent jobs</h2>
-            <div className="flex flex-col gap-3">
-              {recentJobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-            </div>
+            {jobsFeed}
           </section>
 
           <aside className="flex flex-col gap-4">
