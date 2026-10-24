@@ -10,7 +10,6 @@ import {
   Sparkles,
 } from "lucide-react"
 
-import { startPostJobCheckout } from "@/components/post-job-checkout"
 import { buildJobDescriptionAiPrompt } from "@/lib/job-description-ai"
 import { createAdminListing } from "@/app/admin/actions"
 import {
@@ -124,6 +123,7 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
     variant: "success" | "error"
   } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [formVersion, setFormVersion] = useState(0)
 
   useEffect(() => {
@@ -203,25 +203,58 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
     }
 
     if (!isAdmin) {
+      const formData = {
+        title,
+        company,
+        addressLine,
+        employmentSetup,
+        payAmountMin,
+        payAmountMax,
+        payPreset,
+        description,
+        applyTo,
+        employerEmail,
+      }
+      console.log("Submit clicked, sending payload:", formData)
+      setCheckoutError(null)
       setIsSubmitting(true)
       try {
-        const result = await startPostJobCheckout({
-          title,
-          company,
-          addressLine,
-          employmentSetup,
-          payAmountMin,
-          payAmountMax,
-          payPreset,
-          description,
-          applyTo,
-          employerEmail,
+        const response = await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
         })
-        if (!result.ok) {
-          showToast(result.error, "error")
+
+        let errorData: unknown = null
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = { error: "Invalid response from checkout route." }
         }
-      } catch {
-        showToast("Could not start checkout.", "error")
+
+        if (!response.ok) {
+          console.error("Checkout route error:", errorData)
+          setCheckoutError(
+            "Failed to create checkout session. Check server logs."
+          )
+          return
+        }
+
+        const data = errorData as { url?: string }
+        if (!data.url) {
+          console.error("Checkout route error:", errorData)
+          setCheckoutError(
+            "Failed to create checkout session. Check server logs."
+          )
+          return
+        }
+
+        window.location.assign(data.url)
+      } catch (error) {
+        console.error("Checkout route error:", error)
+        setCheckoutError(
+          "Failed to create checkout session. Check server logs."
+        )
       } finally {
         setIsSubmitting(false)
       }
@@ -637,6 +670,14 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
                 </>
               )}
             </ul>
+            {!isAdmin && checkoutError ? (
+              <p
+                className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+                role="alert"
+              >
+                {checkoutError}
+              </p>
+            ) : null}
             <Button
               type="submit"
               size="lg"
@@ -648,7 +689,7 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
                   ? "Publishing…"
                   : "Publish Listing Immediately"
                 : isSubmitting
-                  ? "Redirecting to checkout…"
+                  ? "Redirecting to Stripe..."
                   : "Pay $49 & Publish Job"}
             </Button>
           </CardContent>

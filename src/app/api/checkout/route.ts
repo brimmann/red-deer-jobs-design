@@ -5,14 +5,6 @@ import type { CheckoutJobPayload } from "@/lib/checkout-job-payload"
 
 const METADATA_VALUE_MAX = 500
 
-function getStripe(): Stripe {
-  const secretKey = process.env.STRIPE_SECRET_KEY
-  if (!secretKey) {
-    throw new Error("STRIPE_SECRET_KEY is not configured.")
-  }
-  return new Stripe(secretKey)
-}
-
 function setMetadataValue(
   metadata: Record<string, string>,
   key: string,
@@ -69,7 +61,19 @@ function isValidPayload(body: unknown): body is CheckoutJobPayload {
   )
 }
 
+function stripeErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return String(error)
+}
+
 export async function POST(request: Request) {
+  console.log("Checkout route hit")
+
+  if (!process.env.STRIPE_SECRET_KEY?.trim()) {
+    console.error("Missing STRIPE_SECRET_KEY")
+    return NextResponse.json({ error: "Stripe key missing" }, { status: 500 })
+  }
+
   let payload: unknown
   try {
     payload = await request.json()
@@ -87,9 +91,11 @@ export async function POST(request: Request) {
   const origin =
     request.headers.get("origin") ?? new URL(request.url).origin
 
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+
+  let session: Stripe.Checkout.Session
   try {
-    const stripe = getStripe()
-    const session = await stripe.checkout.sessions.create({
+    session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: payload.employerEmail.trim(),
       line_items: [
@@ -109,21 +115,23 @@ export async function POST(request: Request) {
       success_url: `${origin}/post-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/post`,
     })
-
-    if (!session.url) {
-      return NextResponse.json(
-        { error: "Could not create checkout session." },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ url: session.url })
   } catch (error) {
-    console.error("Stripe checkout error:", error)
-    const message =
-      error instanceof Error && error.message.includes("STRIPE_SECRET_KEY")
-        ? "Payment is not configured yet."
-        : "Could not start checkout."
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error("Stripe session creation error:", error)
+    return NextResponse.json(
+      {
+        error: "Could not create Stripe checkout session.",
+        details: stripeErrorMessage(error),
+      },
+      { status: 500 }
+    )
   }
+
+  if (!session.url) {
+    return NextResponse.json(
+      { error: "Could not create checkout session." },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({ url: session.url })
 }
