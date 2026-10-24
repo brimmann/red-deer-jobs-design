@@ -1,0 +1,33 @@
+---
+description: Git commit author for brimmann / Rashid on GitHub
+alwaysApply: true
+---
+
+# Git commits (this repo)
+
+Commits from the agent must use the GitHub account **brimmann** so history matches the remote owner.
+
+Do **not** use the default shell identity (`rashid@DESKTOP-…` or ad hoc `rashid@users.noreply.github.com` unless it matches below).
+
+## Author (required on every commit)
+
+Always pass identity via `-c` flags (do not change global or local `git config`):
+
+```bash
+git -c user.name="Rashid" \
+    -c user.email="58560473+brimmann@users.noreply.github.com" \
+    commit -m "$(cat <<'EOF'
+Your message here.
+
+EOF
+)"
+```
+
+- **Name:** `Rashid` (GitHub display name)
+- **Email:** `58560473+brimmann@users.noreply.github.com` (GitHub noreply for login `brimmann`, links commits to that account)
+
+If the user asks to use their public email instead, use `rashidstanikzai.net@gmail.com` with the same name.
+
+## Push
+
+After commit, push with normal `git push` (GitHub CLI auth is already configured for `brimmann/red-deer-jobs-design`).
