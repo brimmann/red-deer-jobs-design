@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Search } from "lucide-react"
 
 import {
@@ -11,6 +12,7 @@ import {
   unpublishJob,
 } from "@/app/admin/actions"
 import { AdminCreateListingForm } from "@/components/admin-create-listing-form"
+import { AdminEditListingForm } from "@/components/admin-edit-listing-form"
 import { AdminListingCard } from "@/components/admin-listing-card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -23,9 +25,12 @@ import {
 import { filterAdminListings, type AdminListing } from "@/lib/admin-listings"
 
 export function AdminDashboard({ listings }: { listings: AdminListing[] }) {
+  const router = useRouter()
   const [search, setSearch] = useState("")
   const [actionError, setActionError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [activeTab, setActiveTab] = useState("pending")
+  const [editingListing, setEditingListing] = useState<AdminListing | null>(null)
 
   const filteredListings = useMemo(
     () => filterAdminListings(listings, search),
@@ -37,7 +42,27 @@ export function AdminDashboard({ listings }: { listings: AdminListing[] }) {
     startTransition(async () => {
       const result = await action()
       if (result.error) setActionError(result.error)
+      else router.refresh()
     })
+  }
+
+  function openEditTab(id: string) {
+    const listing = listings.find((item) => item.id === id)
+    if (!listing) return
+    setEditingListing(listing)
+    setActiveTab("edit")
+  }
+
+  function closeEditTab() {
+    setEditingListing(null)
+    setActiveTab("pending")
+  }
+
+  function handleTabChange(value: string) {
+    if (value !== "edit") {
+      setEditingListing(null)
+    }
+    setActiveTab(value)
   }
 
   return (
@@ -81,7 +106,11 @@ export function AdminDashboard({ listings }: { listings: AdminListing[] }) {
         ) : null}
       </header>
 
-      <Tabs defaultValue="pending" className="gap-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="gap-6"
+      >
         <TabsList className="h-auto w-full flex-wrap gap-1 rounded-xl p-1 sm:w-fit">
           <TabsTrigger
             value="pending"
@@ -89,6 +118,14 @@ export function AdminDashboard({ listings }: { listings: AdminListing[] }) {
           >
             Pending Approvals &amp; Jobs
           </TabsTrigger>
+          {editingListing ? (
+            <TabsTrigger
+              value="edit"
+              className="rounded-lg px-3 py-2 text-xs sm:text-sm"
+            >
+              Edit
+            </TabsTrigger>
+          ) : null}
           <TabsTrigger
             value="create"
             className="rounded-lg px-3 py-2 text-xs sm:text-sm"
@@ -111,9 +148,7 @@ export function AdminDashboard({ listings }: { listings: AdminListing[] }) {
                   onApprove={(id) => runAction(() => approveJob(id))}
                   onReject={(id) => runAction(() => rejectJob(id))}
                   onUnpublish={(id) => runAction(() => unpublishJob(id))}
-                  onEdit={() => {
-                    /* demo: no-op */
-                  }}
+                  onEdit={openEditTab}
                   onRepublish={(id) => runAction(() => republishJob(id))}
                   onDelete={(id) => runAction(() => deleteJob(id))}
                 />
@@ -121,6 +156,19 @@ export function AdminDashboard({ listings }: { listings: AdminListing[] }) {
             )}
           </div>
         </TabsContent>
+
+        {editingListing ? (
+          <TabsContent value="edit" className="mt-0">
+            <AdminEditListingForm
+              key={editingListing.id}
+              jobId={editingListing.id}
+              listingTitle={editingListing.title}
+              initialValues={editingListing.editFormValues}
+              onDiscard={closeEditTab}
+              onSaved={closeEditTab}
+            />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="create" className="mt-0">
           <AdminCreateListingForm />

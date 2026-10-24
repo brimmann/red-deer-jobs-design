@@ -11,7 +11,9 @@ import {
   verifyAdminPassword,
 } from "@/lib/admin/session"
 import {
+  isJobDescriptionEmpty,
   mapAdminJobFormToInsert,
+  mapAdminJobFormToUpdate,
   type AdminJobFormValues,
 } from "@/lib/jobs/map-admin-job-form"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -115,6 +117,60 @@ export async function republishJob(jobId: string): Promise<{ error?: string }> {
 
 export async function deleteJob(jobId: string): Promise<{ error?: string }> {
   return rejectJob(jobId)
+}
+
+export async function updateAdminJob(
+  jobId: string,
+  values: AdminJobFormValues,
+  employerEmail: string
+): Promise<{ error?: string }> {
+  try {
+    await requireAdminSession()
+    if (!jobId.trim()) return { error: "Invalid job." }
+    if (!values.title.trim() || !values.company.trim()) {
+      return { error: "Job title and company name are required." }
+    }
+    if (!values.employmentSetup.length) {
+      return {
+        error: "Select at least one employment type or work setup option.",
+      }
+    }
+    if (isJobDescriptionEmpty(values.description)) {
+      return { error: "Job description is required." }
+    }
+    if (!values.applyTo.trim()) {
+      return { error: "Application link or email is required." }
+    }
+    if (!employerEmail.trim()) {
+      return { error: "Employer email is required." }
+    }
+
+    const mapped = mapAdminJobFormToUpdate(values, employerEmail)
+    const supabase = createAdminClient()
+    const { data: existing, error: fetchError } = await supabase
+      .from("jobs")
+      .select("status")
+      .eq("id", jobId)
+      .maybeSingle()
+
+    if (fetchError) return { error: fetchError.message }
+    if (!existing) return { error: "Job not found." }
+
+    const { error } = await supabase.from("jobs").update(mapped).eq("id", jobId)
+
+    if (error) return { error: error.message }
+
+    revalidatePath("/admin")
+    revalidatePath("/search")
+    revalidatePath("/")
+    if (existing.status === "live") {
+      revalidatePath(`/jobs/${jobId}`)
+    }
+
+    return {}
+  } catch {
+    return { error: "Unauthorized" }
+  }
 }
 
 export async function createAdminListing(

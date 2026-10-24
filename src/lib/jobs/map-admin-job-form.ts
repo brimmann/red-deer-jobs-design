@@ -122,3 +122,28 @@ export function mapAdminJobFormToInsert(
     status: "live",
   }
 }
+
+export type JobUpdateRow = Omit<JobInsertRow, "status">
+
+export function mapAdminJobFormToUpdate(
+  values: AdminJobFormValues,
+  employerEmail: string
+): JobUpdateRow {
+  const applyValue = values.applyTo.trim()
+  const email = employerEmail.trim()
+
+  return {
+    title: values.title.trim(),
+    company_name: values.company.trim(),
+    pay_range: formatPayRange(
+      values.payAmountMin,
+      values.payAmountMax,
+      values.payPreset
+    ),
+    employment_types: values.employmentSetup,
+    description: buildDescription(values.description, values.addressLine),
+    apply_method: resolveApplyMethod(applyValue),
+    apply_value: applyValue,
+    employer_email: email || resolveEmployerEmail(applyValue),
+  }
+}

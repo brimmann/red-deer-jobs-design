@@ -1,6 +1,7 @@
 import type { AdminListing, AdminListingStatus } from "@/lib/admin-listings"
-import { createAdminClient } from "@/lib/supabase/admin"
 import { stripHtml } from "@/lib/jobs/map-job-row"
+import { mapManageJobToFormValues } from "@/lib/jobs/manage-job"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export type JobAdminRow = {
   id: string
@@ -64,6 +65,18 @@ export function mapJobRowToAdminListing(row: JobAdminRow): AdminListing {
     workplaceAddress: extractWorkplaceAddress(row.description),
     description: stripHtml(row.description),
     applyTo: row.apply_value,
+    editFormValues: mapManageJobToFormValues({
+      id: row.id,
+      title: row.title,
+      company_name: row.company_name,
+      employer_email: row.employer_email,
+      status: row.status,
+      pay_range: row.pay_range,
+      employment_types: row.employment_types,
+      description: row.description,
+      apply_value: row.apply_value,
+      edit_token: "",
+    }),
   }
 }
 

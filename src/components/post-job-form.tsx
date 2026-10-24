@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react"
 
+import { startPostJobCheckout } from "@/components/post-job-checkout"
 import { buildJobDescriptionAiPrompt } from "@/lib/job-description-ai"
 import { createAdminListing } from "@/app/admin/actions"
 import {
@@ -196,10 +197,34 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
-    if (!isAdmin) return
-
     if (isJobDescriptionEmpty(description)) {
       showToast("Job description is required.", "error")
+      return
+    }
+
+    if (!isAdmin) {
+      setIsSubmitting(true)
+      try {
+        const result = await startPostJobCheckout({
+          title,
+          company,
+          addressLine,
+          employmentSetup,
+          payAmountMin,
+          payAmountMax,
+          payPreset,
+          description,
+          applyTo,
+          employerEmail,
+        })
+        if (!result.ok) {
+          showToast(result.error, "error")
+        }
+      } catch {
+        showToast("Could not start checkout.", "error")
+      } finally {
+        setIsSubmitting(false)
+      }
       return
     }
 
@@ -616,13 +641,15 @@ export function PostJobForm({ variant = "public" }: PostJobFormProps) {
               type="submit"
               size="lg"
               className="h-11 w-full rounded-xl"
-              disabled={isAdmin && isSubmitting}
+              disabled={isSubmitting}
             >
               {isAdmin
                 ? isSubmitting
                   ? "Publishing…"
                   : "Publish Listing Immediately"
-                : "Pay $49 & Publish Job"}
+                : isSubmitting
+                  ? "Redirecting to checkout…"
+                  : "Pay $49 & Publish Job"}
             </Button>
           </CardContent>
         </Card>
