@@ -38,6 +38,10 @@ function getMissingServiceEnvKeys(): string[] {
 }
 
 async function sendManagementLinkEmail(editToken: string): Promise<void> {
+  if (process.env.PLAYWRIGHT_MOCK_RESEND === "1") {
+    return
+  }
+
   const apiKey = process.env.RESEND_API_KEY!.trim()
   const to = process.env.TEST_NOTIFICATION_EMAIL!.trim()
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!.replace(/\/$/, "")
