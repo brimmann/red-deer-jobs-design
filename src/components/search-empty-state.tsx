@@ -1,9 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { Bell } from "lucide-react"
 
+import { submitJobAlertSignup } from "@/app/alerts/actions"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -17,7 +18,10 @@ import { cn } from "cn"
 
 export function SearchEmptyState({ query }: { query: string }) {
   const [email, setEmail] = useState("")
-  const [status, setStatus] = useState<"idle" | "error" | "success">("idle")
+  const [status, setStatus] = useState<
+    "idle" | "error" | "confirmation_sent" | "server_error"
+  >("idle")
+  const [isPending, startTransition] = useTransition()
 
   function onAlertSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -26,8 +30,23 @@ export function SearchEmptyState({ query }: { query: string }) {
       setStatus("error")
       return
     }
-    setStatus("success")
-    setEmail("")
+
+    startTransition(async () => {
+      const result = await submitJobAlertSignup({
+        email,
+        searchQuery: query,
+      })
+      if (result.ok) {
+        setStatus("confirmation_sent")
+        setEmail("")
+        return
+      }
+      if (result.status === "invalid_email") {
+        setStatus("error")
+        return
+      }
+      setStatus("server_error")
+    })
   }
 
   return (
@@ -61,9 +80,14 @@ export function SearchEmptyState({ query }: { query: string }) {
             aria-invalid={status === "error"}
             aria-describedby="search-alert-status"
             className="h-10 flex-1 rounded-xl"
+            disabled={isPending}
           />
-          <Button type="submit" className="h-10 shrink-0 rounded-xl sm:px-5">
-            Get Alerted
+          <Button
+            type="submit"
+            className="h-10 shrink-0 rounded-xl sm:px-5"
+            disabled={isPending}
+          >
+            {isPending ? "Sending…" : "Get Alerted"}
           </Button>
         </form>
         <p
@@ -71,15 +95,18 @@ export function SearchEmptyState({ query }: { query: string }) {
           className={cn(
             "text-center text-xs text-muted-foreground",
             status === "error" && "text-destructive",
-            status === "success" && "text-primary"
+            status === "server_error" && "text-destructive",
+            status === "confirmation_sent" && "text-primary"
           )}
           role="status"
         >
           {status === "error"
             ? "Enter a valid email address."
-            : status === "success"
-              ? `We will email you when a ${query} job is posted.`
-              : "Instant notification only when this specific job is posted. No spam."}
+            : status === "confirmation_sent"
+              ? "Check your email to confirm this alert."
+              : status === "server_error"
+                ? "Something went wrong. Try again in a moment."
+                : "We email you only when a matching job is posted. Confirm via the link we send."}
         </p>
         <Link
           href="/search"

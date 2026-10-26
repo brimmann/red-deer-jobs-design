@@ -2,7 +2,6 @@ import Link from "next/link"
 import { ArrowLeft, BadgeCheck, ExternalLink, Mail } from "lucide-react"
 
 import { JobDocumentTitle } from "@/components/job-document-title"
-import { SaveJobButton } from "@/components/save-job-button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -100,7 +99,6 @@ export function JobDetail({ job }: { job: JobListRow }) {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <ApplyNowButton job={job} />
-            <SaveJobButton />
           </CardContent>
           <CardFooter className="flex-col items-stretch gap-3">
             <div className="flex items-center gap-3">

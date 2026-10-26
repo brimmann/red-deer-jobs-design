@@ -60,6 +60,39 @@ Copy the webhook signing secret Stripe CLI prints into `STRIPE_WEBHOOK_SECRET`.
 
 **RLS note:** Project docs may state RLS is disabled on `jobs` during early testing. Security scenarios below describe **intended production behavior** when RLS restricts anonymous access to `status = 'live'` rows only. Re-run those tests after enabling policies in Supabase.
 
+### Automated testing (Playwright)
+
+Run the full suite:
+
+```bash
+npm run test:e2e
+```
+
+Run job alerts only:
+
+```bash
+npm run test:e2e tests/job-alerts.spec.ts
+```
+
+Playwright starts its own `npm run dev` by default (with `PLAYWRIGHT_MOCK_RESEND=1`). Stop any other app on port 3000 first, or set `PLAYWRIGHT_REUSE_SERVER=1` only if that server was started with the same env (including mock Resend for alert signups).
+
+**Prerequisites:** Same Supabase service key as other E2E tests (`SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`). The dev server started by Playwright sets `PLAYWRIGHT_MOCK_RESEND=1`, so confirm emails are not sent during E2E.
+
+**Job alert tables:** If setup/teardown logs `permission denied for table job_alert_subscribers`, run [`scripts/supabase-job-alerts-grants.sql`](scripts/supabase-job-alerts-grants.sql) in the Supabase SQL Editor (required after creating the alert tables).
+
+**Job alerts E2E coverage (`tests/job-alerts.spec.ts`):**
+
+| ID | What it checks |
+|----|----------------|
+| A1 | Home daily signup → pending row in DB |
+| A2 | Confirm link → `confirmed_at` set |
+| A3 | Search empty-state keyword signup |
+| A4 | Keyword confirm success copy |
+| A5 | Invalid email inline error |
+| A6 | Bad confirm token UI |
+
+Test emails use the pattern `playwright-alert-*@example.com` and are removed in global setup/teardown.
+
 ---
 
 ## Core user scenarios

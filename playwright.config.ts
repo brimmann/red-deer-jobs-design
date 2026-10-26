@@ -1,3 +1,4 @@
+import fs from "fs"
 import path from "path"
 
 import dotenv from "dotenv"
@@ -12,10 +13,14 @@ const bundledLibs = path.join(
   __dirname,
   ".playwright-libs/usr/lib/x86_64-linux-gnu"
 )
-if (process.env.LD_LIBRARY_PATH?.includes(bundledLibs) === false) {
-  process.env.LD_LIBRARY_PATH = [bundledLibs, process.env.LD_LIBRARY_PATH]
+/** WSL/minimal Linux: Chromium needs NSPR/NSS from repo-local `.playwright-libs`. */
+if (fs.existsSync(bundledLibs)) {
+  const segments = (process.env.LD_LIBRARY_PATH ?? "")
+    .split(":")
     .filter(Boolean)
-    .join(":")
+  if (!segments.includes(bundledLibs)) {
+    process.env.LD_LIBRARY_PATH = [bundledLibs, ...segments].join(":")
+  }
 }
 
 export default defineConfig({
@@ -40,7 +45,9 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    // Reuse only when explicitly requested; otherwise start dev with PLAYWRIGHT_MOCK_RESEND.
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
+    // reuseExistingServer: false,
     timeout: 120_000,
     env: {
       ...process.env,

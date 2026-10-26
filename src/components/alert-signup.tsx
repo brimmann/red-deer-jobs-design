@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { Mail } from "lucide-react"
 
+import { submitJobAlertSignup } from "@/app/alerts/actions"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,7 +17,10 @@ import { Label } from "@/components/ui/label"
 
 export function AlertSignup() {
   const [email, setEmail] = useState("")
-  const [status, setStatus] = useState<"idle" | "error" | "success">("idle")
+  const [status, setStatus] = useState<
+    "idle" | "error" | "confirmation_sent" | "server_error"
+  >("idle")
+  const [isPending, startTransition] = useTransition()
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -25,8 +29,20 @@ export function AlertSignup() {
       setStatus("error")
       return
     }
-    setStatus("success")
-    setEmail("")
+
+    startTransition(async () => {
+      const result = await submitJobAlertSignup({ email })
+      if (result.ok) {
+        setStatus("confirmation_sent")
+        setEmail("")
+        return
+      }
+      if (result.status === "invalid_email") {
+        setStatus("error")
+        return
+      }
+      setStatus("server_error")
+    })
   }
 
   return (
@@ -58,15 +74,21 @@ export function AlertSignup() {
               aria-invalid={status === "error"}
               aria-describedby="alert-status"
               className="h-10 rounded-xl"
+              disabled={isPending}
             />
           </div>
-          <Button type="submit" variant="secondary" className="rounded-xl">
-            Get alerts
+          <Button
+            type="submit"
+            variant="secondary"
+            className="rounded-xl"
+            disabled={isPending}
+          >
+            {isPending ? "Sending…" : "Get alerts"}
           </Button>
           <p
             id="alert-status"
             className={
-              status === "error"
+              status === "error" || status === "server_error"
                 ? "text-sm text-destructive"
                 : "text-sm text-primary"
             }
@@ -74,9 +96,11 @@ export function AlertSignup() {
           >
             {status === "error"
               ? "Enter a valid email address."
-              : status === "success"
-                ? "You are on the daily Red Deer list."
-                : null}
+              : status === "confirmation_sent"
+                ? "Check your email to confirm daily alerts."
+                : status === "server_error"
+                  ? "Something went wrong. Try again in a moment."
+                  : null}
           </p>
         </form>
       </CardContent>

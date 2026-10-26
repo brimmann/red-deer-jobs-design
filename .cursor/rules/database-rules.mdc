@@ -21,7 +21,25 @@ Table Name: `jobs` (Row Level Security is currently DISABLED for testing)
 - `edit_token`: `uuid` (auto-generated)
 - `status`: `text` (default `'pending'` — allowed values: `'pending'`, `'live'`, `'expired'`)
 
+## Table: `job_alert_subscribers` (RLS enabled — server/service role only)
+
+- `id`: `uuid` (Primary Key)
+- `created_at`: `timestamptz`
+- `email`: `text` (stored normalized: lower trim)
+- `search_query`: `text` (optional — `NULL` = daily alerts; set = keyword alert)
+- `confirmed_at`: `timestamptz` (optional — active subscribers only when set)
+- `confirm_token`: `uuid` (optional — pending confirmation)
+- `confirm_expires_at`: `timestamptz` (optional)
+
+## Table: `job_alert_attempts` (RLS enabled — rate limiting, service role only)
+
+- `id`: `uuid` (Primary Key)
+- `created_at`: `timestamptz`
+- `ip_hash`: `text`
+- `email`: `text`
+
 ## Rules for AI Agent
 - Use this exact table name (`jobs`) and column names for all Supabase queries.
 - Do not invent extra columns or change column types.
 - Assume public `SELECT`, `INSERT`, `UPDATE`, and `DELETE` access on this table during the initial build phase.
+- Alert signups and confirmations use `job_alert_subscribers` via admin client only; treat `confirmed_at is not null` as the active mailing list.
