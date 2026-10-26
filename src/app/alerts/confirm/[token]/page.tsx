@@ -1,35 +1,30 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 
 import {
-  AlertConfirmInvalidLink,
-  AlertConfirmSuccess,
-} from "@/components/alert-confirm-states"
+  AlertConfirmPageFallback,
+  AlertConfirmPageLoader,
+} from "@/components/alert-confirm-page-loader"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
-import { confirmJobAlertToken } from "@/lib/job-alerts"
 
 export const metadata: Metadata = {
   title: "Confirm job alerts | Red Deer Jobs",
   description: "Confirm your email for Red Deer Jobs alerts.",
 }
 
-export default async function AlertConfirmPage({
+export default function AlertConfirmPage({
   params,
 }: {
   params: Promise<{ token: string }>
 }) {
-  const { token } = await params
-  const result = await confirmJobAlertToken(token)
-
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <SiteHeader />
       <main className="flex-1">
-        {result.ok ? (
-          <AlertConfirmSuccess searchQuery={result.searchQuery} />
-        ) : (
-          <AlertConfirmInvalidLink />
-        )}
+        <Suspense fallback={<AlertConfirmPageFallback />}>
+          <AlertConfirmPageLoader params={params} />
+        </Suspense>
       </main>
       <SiteFooter />
     </div>
